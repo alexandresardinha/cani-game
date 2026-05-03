@@ -83,6 +83,7 @@ namespace Canicross.Editor
             systems.AddComponent<Systems.SpeedSystem>();
             systems.AddComponent<Player.BondSystem>();
             systems.AddComponent<Player.InputHandler>();
+            systems.AddComponent<Player.VoiceInputController>();
             return systems;
         }
 

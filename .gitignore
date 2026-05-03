@@ -22,6 +22,7 @@ Assets/AssetStoreTools*
 
 # Blender
 *.blend1
+*.blend1.meta
 *.blend2
 
 # OS
@@ -32,6 +33,7 @@ Thumbs.db
 # Large media — not tracked in git
 Characters/_raw_downloads/
 Characters/*/Reference/Frames/
+Characters/*/Reference/Selected_For_AI/
 Refs/*.mp4
 Refs/*.webm
 Refs/frame_*.png
