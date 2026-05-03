@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEditor;
 using System.IO;
+using Canicross.Player;
+using Canicross.Environment;
 
 namespace Canicross.Editor
 {
@@ -45,7 +47,10 @@ namespace Canicross.Editor
 
             if (Application.isBatchMode)
             {
-                CaptureScreenshot();
+                GenerateReport();
+                CaptureScreenshotRendered();
+                Debug.Log("[AutoTester] Teste concluido!");
+                EditorApplication.Exit(0);
             }
             else
             {
@@ -57,59 +62,80 @@ namespace Canicross.Editor
         private static void WaitAndCapture()
         {
             frameCount++;
-            if (frameCount < 3) return;
+            if (frameCount < 10) return;
             EditorApplication.update -= WaitAndCapture;
-            CaptureScreenshot();
+            GenerateReport();
+            CaptureScreenshotRendered();
+            Debug.Log("[AutoTester] Teste concluido!");
         }
 
-        private static void CaptureScreenshot()
+        private static void CaptureScreenshotSimple(Camera cam)
         {
-            Debug.Log("[AutoTester] Capturando screenshot...");
+        }
 
-            int width = 1280;
-            int height = 720;
-
-            var cam = GameObject.Find("ScreenshotCamera")?.GetComponent<Camera>();
-            if (cam == null) cam = Camera.main;
-
-            if (cam == null)
-            {
-                Debug.LogError("[AutoTester] Nenhuma camera encontrada!");
-                if (Application.isBatchMode) EditorApplication.Exit(1);
-                return;
-            }
-
-            var rt = new RenderTexture(width, height, 24);
-            cam.targetTexture = rt;
-            cam.Render();
-
-            RenderTexture.active = rt;
-            var tex = new Texture2D(width, height, TextureFormat.RGB24, false);
-            tex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-            tex.Apply();
+        private static void CaptureScreenshotRendered()
+        {
+            Debug.Log("[AutoTester] Capturando screenshot via render...");
 
             string projectRoot = Path.GetDirectoryName(Application.dataPath);
             string testDir = Path.Combine(projectRoot, "TestResults");
             Directory.CreateDirectory(testDir);
-
             string screenshotPath = Path.Combine(testDir, "dog_test_result.png");
-            File.WriteAllBytes(screenshotPath, tex.EncodeToPNG());
 
-            Debug.Log("[AutoTester] Screenshot salvo em: " + screenshotPath);
+            try
+            {
+                Camera cam = null;
+                var camObj = GameObject.Find("CameraRig");
+                if (camObj != null) cam = camObj.GetComponent<Camera>();
+                if (cam == null) cam = Camera.main;
+                if (cam == null)
+                {
+                    var screenshotCam = GameObject.Find("ScreenshotCamera");
+                    if (screenshotCam != null) cam = screenshotCam.GetComponent<Camera>();
+                }
 
-            cam.targetTexture = null;
-            RenderTexture.active = null;
-            Object.DestroyImmediate(rt);
-            Object.DestroyImmediate(tex);
+                if (cam == null)
+                {
+                    Debug.LogError("[AutoTester] Nenhuma camera encontrada para screenshot!");
+                    return;
+                }
 
-            GenerateReport(testDir);
+                int width = 1280;
+                int height = 720;
 
-            Debug.Log("[AutoTester] Teste concluido!");
-            if (Application.isBatchMode) EditorApplication.Exit(0);
+                RenderTexture rt = new RenderTexture(width, height, 32, RenderTextureFormat.ARGB32);
+                rt.antiAliasing = 1;
+                rt.Create();
+                cam.targetTexture = rt;
+                cam.Render();
+                RenderTexture.active = rt;
+
+                Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+                tex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+                tex.Apply();
+
+                byte[] bytes = tex.EncodeToPNG();
+                File.WriteAllBytes(screenshotPath, bytes);
+
+                Debug.Log("[AutoTester] Screenshot salvo em: " + screenshotPath + " (" + bytes.Length + " bytes)");
+
+                cam.targetTexture = null;
+                RenderTexture.active = null;
+                Object.DestroyImmediate(rt);
+                Object.DestroyImmediate(tex);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError("[AutoTester] Erro ao capturar screenshot: " + e.Message + "\n" + e.StackTrace);
+            }
         }
 
-        private static void GenerateReport(string testDir)
+        private static void GenerateReport()
         {
+            string projectRoot = Path.GetDirectoryName(Application.dataPath);
+            string testDir = Path.Combine(projectRoot, "TestResults");
+            Directory.CreateDirectory(testDir);
+
             var dog = GameObject.Find("Dog");
             var sb = new System.Text.StringBuilder();
             sb.AppendLine("# Relatorio de Teste - Canicross");
@@ -123,17 +149,13 @@ namespace Canicross.Editor
                 sb.AppendLine("- Posicao: " + dog.transform.position.ToString());
                 sb.AppendLine("- Escala: " + dog.transform.localScale.ToString());
                 sb.AppendLine("- Rotacao: " + dog.transform.eulerAngles.ToString());
+                sb.AppendLine("- Filhos: " + dog.transform.childCount.ToString());
 
                 var renderer = dog.GetComponentInChildren<Renderer>();
                 if (renderer != null)
                 {
-                    string matName = renderer.sharedMaterial != null ? renderer.sharedMaterial.name : "N/A";
-                    sb.AppendLine("- Material: " + matName);
                     sb.AppendLine("- Bounds: " + renderer.bounds.ToString());
                 }
-
-                var animator = dog.GetComponentInChildren<Animator>();
-                sb.AppendLine("- Animator: " + (animator != null ? "SIM" : "NAO"));
 
                 var rb = dog.GetComponent<Rigidbody>();
                 if (rb != null)
@@ -143,13 +165,17 @@ namespace Canicross.Editor
                 }
 
                 var dogCtrl = dog.GetComponent<DogController>();
-                if (dogCtrl != null)
-                {
-                    sb.AppendLine("- DogController: SIM");
-                }
+                sb.AppendLine("- DogController: " + (dogCtrl != null ? "SIM" : "NAO"));
 
                 var tether = dog.transform.Find("TetherAttachPoint");
                 sb.AppendLine("- TetherAttachPoint: " + (tether != null ? "SIM" : "NAO"));
+
+                int partCount = 0;
+                foreach (Transform child in dog.transform)
+                {
+                    partCount++;
+                }
+                sb.AppendLine("- Partes (filhos): " + partCount.ToString());
             }
             else
             {
@@ -163,6 +189,7 @@ namespace Canicross.Editor
                 sb.AppendLine("## Corredor (Runner)");
                 sb.AppendLine("- Posicao: " + runner.transform.position.ToString());
                 sb.AppendLine("- Escala: " + runner.transform.localScale.ToString());
+                sb.AppendLine("- Filhos: " + runner.transform.childCount.ToString());
 
                 var cc = runner.GetComponent<CharacterController>();
                 if (cc != null)
@@ -185,10 +212,13 @@ namespace Canicross.Editor
                 sb.AppendLine("- LineRenderer: " + (lr != null ? "SIM" : "NAO"));
             }
 
-            var trackObjs = GameObject.FindObjectsOfType<Canicross.Environment.CheckpointTrigger>();
+            var trackObjs = Object.FindObjectsByType<CheckpointTrigger>(FindObjectsSortMode.None);
             sb.AppendLine();
             sb.AppendLine("## Cenario");
-            sb.AppendLine("- Checkpoints: " + trackObjs.Length);
+            sb.AppendLine("- Checkpoints: " + (trackObjs != null ? trackObjs.Length.ToString() : "0"));
+
+            var allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+            sb.AppendLine("- Total GameObjects: " + (allObjects != null ? allObjects.Length.ToString() : "0"));
 
             string reportPath = Path.Combine(testDir, "test_report.md");
             File.WriteAllText(reportPath, sb.ToString());

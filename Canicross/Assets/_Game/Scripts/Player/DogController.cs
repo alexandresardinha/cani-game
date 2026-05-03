@@ -27,7 +27,7 @@ namespace Canicross.Player
         [Header("References")]
         [SerializeField] private StaminaSystem staminaSystem;
         [SerializeField] private Rigidbody rb;
-        private TetherSystem tetherSystem;
+        [SerializeField] private TetherSystem tetherSystem;
 
         public bool IsGrounded { get; private set; } = true;
         public bool IsBoosting { get; private set; }

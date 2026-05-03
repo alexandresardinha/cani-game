@@ -40,7 +40,7 @@ namespace Canicross.Editor
         private static GameObject CreateRunner()
         {
             GameObject runner = Player.CharacterBuilder.BuildRunner();
-            runner.transform.position = new Vector3(0, 0f, 0f);
+            runner.transform.position = new Vector3(0, 0f, 5f);
             runner.transform.rotation = Quaternion.identity;
             return runner;
         }
@@ -54,7 +54,15 @@ namespace Canicross.Editor
             Transform dogAttach = dog.transform.Find("TetherAttachPoint");
             Transform runnerAttach = runner.transform.Find("TetherAttachPoint");
 
-            tetherSys.SetPoints(dogAttach, runnerAttach);
+            if (dogAttach != null && runnerAttach != null)
+            {
+                tetherSys.SetPoints(dogAttach, runnerAttach);
+            }
+            else
+            {
+                Debug.LogWarning("[Canicross] TetherAttachPoint not found on dog or runner. Connecting to transforms directly.");
+                tetherSys.SetPoints(dog.transform, runner.transform);
+            }
 
             return tether;
         }
@@ -115,14 +123,6 @@ namespace Canicross.Editor
             return hud;
         }
 
-        private static GameObject CreateGameManager(GameObject dog, GameObject runner, GameObject tether, GameObject systems, GameObject camera, GameObject hud)
-        {
-            GameObject gameManager = new GameObject("GameManager");
-            Core.GameManager gm = gameManager.AddComponent<Core.GameManager>();
-            Core.RaceManager rm = gameManager.AddComponent<Core.RaceManager>();
-            return gameManager;
-        }
-
         private static void WireUpReferences(GameObject dog, GameObject runner, GameObject tether,
             GameObject systems, GameObject camera, GameObject hud)
         {
@@ -136,77 +136,89 @@ namespace Canicross.Editor
             BondSystem bond = systems.GetComponent<BondSystem>();
             InputHandler input = systems.GetComponent<InputHandler>();
 
+            Rigidbody dogRb = dog.GetComponent<Rigidbody>();
+            CharacterController runnerCC = runner.GetComponent<CharacterController>();
+
             GameObject gameManager = new GameObject("GameManager");
             Core.GameManager gm = gameManager.AddComponent<Core.GameManager>();
             Core.RaceManager raceMgr = gameManager.AddComponent<Core.RaceManager>();
 
-            SerializedObject gmSo = new SerializedObject(gm);
-            gmSo.FindProperty("dogController").objectReferenceValue = dogCtrl;
-            gmSo.FindProperty("runnerController").objectReferenceValue = runnerCtrl;
-            gmSo.FindProperty("staminaSystem").objectReferenceValue = stamina;
-            gmSo.FindProperty("bondSystem").objectReferenceValue = bond;
-            gmSo.FindProperty("raceManager").objectReferenceValue = raceMgr;
-            gmSo.FindProperty("hudController").objectReferenceValue = hudCtrl;
-            gmSo.ApplyModifiedProperties();
+            SafeSetProperty(gm, "dogController", dogCtrl);
+            SafeSetProperty(gm, "runnerController", runnerCtrl);
+            SafeSetProperty(gm, "staminaSystem", stamina);
+            SafeSetProperty(gm, "bondSystem", bond);
+            SafeSetProperty(gm, "raceManager", raceMgr);
+            SafeSetProperty(gm, "hudController", hudCtrl);
 
-            SerializedObject dogSo = new SerializedObject(dogCtrl);
-            dogSo.FindProperty("staminaSystem").objectReferenceValue = stamina;
-            dogSo.FindProperty("rb").objectReferenceValue = dog.GetComponent<Rigidbody>();
-            dogSo.FindProperty("tetherSystem").objectReferenceValue = tetherSys;
-            dogSo.ApplyModifiedProperties();
+            SafeSetProperty(dogCtrl, "staminaSystem", stamina);
+            SafeSetProperty(dogCtrl, "rb", dogRb);
+            SafeSetProperty(dogCtrl, "tetherSystem", tetherSys);
 
-            SerializedObject runnerSo = new SerializedObject(runnerCtrl);
-            runnerSo.FindProperty("dogTransform").objectReferenceValue = dog.transform;
-            runnerSo.FindProperty("staminaSystem").objectReferenceValue = stamina;
-            runnerSo.FindProperty("charController").objectReferenceValue = runner.GetComponent<CharacterController>();
-            runnerSo.FindProperty("tetherSystem").objectReferenceValue = tetherSys;
-            runnerSo.ApplyModifiedProperties();
+            SafeSetProperty(runnerCtrl, "dogTransform", dog.transform);
+            SafeSetProperty(runnerCtrl, "staminaSystem", stamina);
+            SafeSetProperty(runnerCtrl, "charController", runnerCC);
+            SafeSetProperty(runnerCtrl, "tetherSystem", tetherSys);
 
-            SerializedObject povSo = new SerializedObject(povCam);
-            povSo.FindProperty("dogController").objectReferenceValue = dogCtrl;
-            povSo.FindProperty("target").objectReferenceValue = dog.transform;
-            povSo.ApplyModifiedProperties();
+            SafeSetProperty(povCam, "dogController", dogCtrl);
+            SafeSetProperty(povCam, "target", dog.transform);
 
-            SerializedObject speedSo = new SerializedObject(speed);
-            speedSo.FindProperty("dogController").objectReferenceValue = dogCtrl;
-            speedSo.ApplyModifiedProperties();
+            SafeSetProperty(speed, "dogController", dogCtrl);
 
             if (bond != null)
             {
-                SerializedObject bondSo = new SerializedObject(bond);
-                bondSo.FindProperty("staminaSystem").objectReferenceValue = stamina;
-                bondSo.FindProperty("dogController").objectReferenceValue = dogCtrl;
-                bondSo.ApplyModifiedProperties();
+                SafeSetProperty(bond, "staminaSystem", stamina);
+                SafeSetProperty(bond, "dogController", dogCtrl);
             }
 
             if (input != null)
             {
-                SerializedObject inputSo = new SerializedObject(input);
-                inputSo.FindProperty("dogController").objectReferenceValue = dogCtrl;
-                inputSo.FindProperty("bondSystem").objectReferenceValue = bond;
-                inputSo.ApplyModifiedProperties();
+                SafeSetProperty(input, "dogController", dogCtrl);
+                SafeSetProperty(input, "bondSystem", bond);
             }
 
             if (hudCtrl != null)
             {
-                SerializedObject hudSo = new SerializedObject(hudCtrl);
-                hudSo.FindProperty("staminaSystem").objectReferenceValue = stamina;
-                hudSo.FindProperty("speedSystem").objectReferenceValue = speed;
-                hudSo.FindProperty("bondSystem").objectReferenceValue = bond;
-                hudSo.FindProperty("raceManager").objectReferenceValue = raceMgr;
-                hudSo.FindProperty("dogController").objectReferenceValue = dogCtrl;
-                hudSo.ApplyModifiedProperties();
+                SafeSetProperty(hudCtrl, "staminaSystem", stamina);
+                SafeSetProperty(hudCtrl, "speedSystem", speed);
+                SafeSetProperty(hudCtrl, "bondSystem", bond);
+                SafeSetProperty(hudCtrl, "raceManager", raceMgr);
+                SafeSetProperty(hudCtrl, "dogController", dogCtrl);
             }
 
-            SerializedObject tmSo = new SerializedObject(raceMgr);
-            tmSo.ApplyModifiedProperties();
+            Transform dogAttach = dog.transform.Find("TetherAttachPoint");
+            Transform runnerAttach = runner.transform.Find("TetherAttachPoint");
+            if (dogAttach != null && runnerAttach != null)
+            {
+                SafeSetProperty(tetherSys, "dogPoint", dogAttach);
+                SafeSetProperty(tetherSys, "runnerPoint", runnerAttach);
+            }
 
-            SerializedObject tetherSo = new SerializedObject(tetherSys);
-            tetherSo.FindProperty("dogPoint").objectReferenceValue = dog.transform.Find("TetherAttachPoint");
-            tetherSo.FindProperty("runnerPoint").objectReferenceValue = runner.transform.Find("TetherAttachPoint");
-            tetherSo.ApplyModifiedProperties();
+            Debug.Log("[Canicross] All references wired up.");
+        }
 
-            Debug.Log("[Canicross] All references wired up automatically.");
+        private static void SafeSetProperty(Object obj, string propertyName, Object value)
+        {
+            if (obj == null)
+            {
+                Debug.LogWarning($"[Canicross] Cannot set {propertyName}: target object is null");
+                return;
+            }
+            if (value == null && propertyName != "rb")
+            {
+                Debug.LogWarning($"[Canicross] Setting {propertyName} to null on {obj.GetType().Name}");
+            }
+
+            SerializedObject so = new SerializedObject(obj);
+            SerializedProperty prop = so.FindProperty(propertyName);
+            if (prop != null)
+            {
+                prop.objectReferenceValue = value;
+                so.ApplyModifiedProperties();
+            }
+            else
+            {
+                Debug.LogWarning($"[Canicross] Property '{propertyName}' not found on {obj.GetType().Name}");
+            }
         }
 
         private static GameObject CreateHUDBar(GameObject parent, string name, Vector2 anchoredPos,
@@ -280,23 +292,21 @@ namespace Canicross.Editor
             TimerDisplay timerDisplay, GameObject speedGo, GameObject bondGo, GameObject dogNameGo,
             GameObject dogStaminaGo, GameObject runnerStaminaGo)
         {
-            SerializedObject hudSo = new SerializedObject(hudCtrl);
-            hudSo.FindProperty("dogStaminaBar").objectReferenceValue = dogBar;
-            hudSo.FindProperty("runnerStaminaBar").objectReferenceValue = runnerBar;
-            hudSo.FindProperty("timerDisplay").objectReferenceValue = timerDisplay;
-            hudSo.FindProperty("speedText").objectReferenceValue = speedGo.GetComponent<UnityEngine.UI.Text>();
-            hudSo.FindProperty("bondText").objectReferenceValue = bondGo.GetComponent<UnityEngine.UI.Text>();
-            hudSo.FindProperty("dogNameText").objectReferenceValue = dogNameGo != null ? dogNameGo.GetComponent<UnityEngine.UI.Text>() : null;
-            hudSo.ApplyModifiedProperties();
+            if (hudCtrl == null) return;
+
+            SafeSetProperty(hudCtrl, "dogStaminaBar", dogBar);
+            SafeSetProperty(hudCtrl, "runnerStaminaBar", runnerBar);
+            SafeSetProperty(hudCtrl, "timerDisplay", timerDisplay);
+            SafeSetProperty(hudCtrl, "speedText", speedGo != null ? speedGo.GetComponent<UnityEngine.UI.Text>() : null);
+            SafeSetProperty(hudCtrl, "bondText", bondGo != null ? bondGo.GetComponent<UnityEngine.UI.Text>() : null);
+            SafeSetProperty(hudCtrl, "dogNameText", dogNameGo != null ? dogNameGo.GetComponent<UnityEngine.UI.Text>() : null);
 
             if (dogStaminaGo != null)
             {
                 Transform fillTr = dogStaminaGo.transform.Find("Fill");
                 if (fillTr != null)
                 {
-                    SerializedObject dogBarSo = new SerializedObject(dogBar);
-                    dogBarSo.FindProperty("fillImage").objectReferenceValue = fillTr.GetComponent<UnityEngine.UI.Image>();
-                    dogBarSo.ApplyModifiedProperties();
+                    SafeSetProperty(dogBar, "fillImage", fillTr.GetComponent<UnityEngine.UI.Image>());
                 }
             }
 
@@ -305,9 +315,7 @@ namespace Canicross.Editor
                 Transform fillTr = runnerStaminaGo.transform.Find("Fill");
                 if (fillTr != null)
                 {
-                    SerializedObject runnerBarSo = new SerializedObject(runnerBar);
-                    runnerBarSo.FindProperty("fillImage").objectReferenceValue = fillTr.GetComponent<UnityEngine.UI.Image>();
-                    runnerBarSo.ApplyModifiedProperties();
+                    SafeSetProperty(runnerBar, "fillImage", fillTr.GetComponent<UnityEngine.UI.Image>());
                 }
             }
         }

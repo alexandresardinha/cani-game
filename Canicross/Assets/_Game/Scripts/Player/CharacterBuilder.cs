@@ -62,7 +62,10 @@ namespace Canicross.Player
             rightEar.transform.localRotation = Quaternion.Euler(15f, 0f, -15f);
 
             CreateLegs(dogTransform, furMat);
-            CreateTail(dogTransform, maskMat);
+            GameObject tail = CreateTail(maskMat);
+            tail.transform.SetParent(dogTransform);
+            tail.transform.localPosition = new Vector3(0, 0.25f, -0.25f);
+            tail.transform.localRotation = Quaternion.Euler(-30f, 0f, 0f);
 
             GameObject collar = CreateCollar(collarMat);
             collar.transform.SetParent(dogTransform);
