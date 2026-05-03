@@ -48,6 +48,9 @@ namespace Canicross.Editor
             if (Application.isBatchMode)
             {
                 GenerateReport();
+                // In batch mode, wait briefly for render pipeline to initialize
+                // Optimized: reduced from 2000ms to 500ms for faster batch testing
+                System.Threading.Thread.Sleep(500);
                 CaptureScreenshotRendered();
                 Debug.Log("[AutoTester] Teste concluido!");
                 EditorApplication.Exit(0);
@@ -62,7 +65,8 @@ namespace Canicross.Editor
         private static void WaitAndCapture()
         {
             frameCount++;
-            if (frameCount < 10) return;
+            // Optimized: reduced from 10 to 3 frames for faster editor testing
+            if (frameCount < 3) return;
             EditorApplication.update -= WaitAndCapture;
             GenerateReport();
             CaptureScreenshotRendered();

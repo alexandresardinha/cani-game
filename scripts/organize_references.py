@@ -8,7 +8,7 @@ import os
 import shutil
 from pathlib import Path
 
-BASE = Path("/home/asardinha/workspace/cani-game")
+BASE = Path("/mnt/c/Users/alexa/Projetos/cani-game")
 RAW = BASE / "Characters" / "_raw_downloads"
 DOG_PHOTOS = BASE / "Characters" / "Adao_Dog" / "Reference" / "Photos"
 DOG_VIDEOS = BASE / "Characters" / "Adao_Dog" / "Reference" / "Videos"

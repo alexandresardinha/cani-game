@@ -15,25 +15,29 @@ namespace Canicross.Environment
             CreateLake(trackRoot.transform);
             CreateTrees(trackRoot.transform);
             CreatePath(trackRoot.transform);
+            CreateGoldenField(trackRoot.transform);
+            CreateForestTunnel(trackRoot.transform);
             CreateProps(trackRoot.transform);
             CreateLighting(trackRoot.transform);
             CreateCheckpoints(trackRoot.transform);
             CreateObstacles(trackRoot.transform);
+            CreateAtmosphere(trackRoot.transform);
 
             return trackRoot;
         }
 
         private static void CreateGround(Transform parent)
         {
+            // Main forest ground
             GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
             ground.name = "Ground_Forest";
             ground.transform.SetParent(parent);
             ground.transform.position = new Vector3(0, 0, 50);
-            ground.transform.localScale = new Vector3(20, 1, 10);
+            ground.transform.localScale = new Vector3(25, 1, 12);
 
             Material groundMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            groundMat.color = new Color(0.25f, 0.38f, 0.15f);
-            groundMat.SetFloat("_Glossiness", 0.1f);
+            groundMat.color = new Color(0.22f, 0.38f, 0.14f);
+            groundMat.SetFloat("_Glossiness", 0.05f);
             ground.GetComponent<Renderer>().material = groundMat;
 
             ground.layer = LayerMask.NameToLayer("Default");
@@ -41,16 +45,17 @@ namespace Canicross.Environment
 
         private static void CreateLake(Transform parent)
         {
+            // Main lake body
             GameObject lake = GameObject.CreatePrimitive(PrimitiveType.Plane);
             lake.name = "Lake";
             lake.transform.SetParent(parent);
-            lake.transform.position = new Vector3(8, -0.05f, 50);
-            lake.transform.localScale = new Vector3(6, 1, 8);
+            lake.transform.position = new Vector3(9, -0.08f, 50);
+            lake.transform.localScale = new Vector3(8, 1, 12);
 
             Material waterMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            waterMat.color = new Color(0.12f, 0.56f, 0.7f);
+            waterMat.color = new Color(0.1f, 0.5f, 0.72f);
             waterMat.SetFloat("_Glossiness", 0.95f);
-            waterMat.SetFloat("_Metallic", 0.3f);
+            waterMat.SetFloat("_Metallic", 0.2f);
             lake.GetComponent<Renderer>().material = waterMat;
 
             Collider lakeCol = lake.GetComponent<Collider>();
@@ -59,38 +64,62 @@ namespace Canicross.Environment
                 lakeCol.isTrigger = true;
                 lake.AddComponent<Obstacle>().SetType(Obstacle.ObstacleType.Water);
             }
+
+            // Lake shore detail (small pebbles/edge)
+            GameObject shore = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            shore.name = "LakeShore";
+            shore.transform.SetParent(parent);
+            shore.transform.position = new Vector3(5.5f, 0.01f, 50);
+            shore.transform.localScale = new Vector3(1.5f, 1, 12);
+
+            Material shoreMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            shoreMat.color = new Color(0.5f, 0.45f, 0.3f);
+            shoreMat.SetFloat("_Glossiness", 0.1f);
+            shore.GetComponent<Renderer>().material = shoreMat;
         }
 
         private static void CreateTrees(Transform parent)
         {
             Color trunkColor = new Color(0.35f, 0.22f, 0.1f);
             Color foliageGreen = new Color(0.13f, 0.37f, 0.13f);
-            Color foliageDark = new Color(0.08f, 0.25f, 0.08f);
+            Color foliageDark = new Color(0.06f, 0.22f, 0.06f);
+            Color foliageGolden = new Color(0.5f, 0.45f, 0.15f);
 
             float[,] treePositions = new float[,]
             {
-                {-4f, 3f}, {-5.5f, 8f}, {-3f, 15f}, {-6f, 22f},
-                {-4.5f, 30f}, {-5f, 38f}, {-3.5f, 45f}, {-6f, 52f},
-                {-4f, 60f}, {-5.5f, 68f}, {-3f, 75f}, {-6f, 82f},
-                {-4.5f, 88f}, {-5f, 95f},
-                {7f, 5f}, {8.5f, 12f}, {7.5f, 20f}, {9f, 28f},
-                {7f, 36f}, {8f, 42f}, {7.5f, 50f}, {9f, 58f}
+                // Left side forest
+                {-5f, 3f}, {-6.5f, 8f}, {-4f, 15f}, {-7f, 22f},
+                {-5.5f, 30f}, {-6f, 38f}, {-4.5f, 45f}, {-7f, 52f},
+                {-5f, 60f}, {-6.5f, 68f}, {-4f, 75f}, {-7f, 82f},
+                {-5.5f, 88f}, {-6f, 95f},
+                // Right side (away from lake)
+                {-4f, 10f}, {-5.5f, 18f}, {-3.5f, 28f}, {-6f, 42f},
+                {-4f, 55f}, {-5f, 65f}, {-3.5f, 72f}, {-6.5f, 85f},
+                // Far right (past lake area)
+                {12f, 5f}, {13.5f, 12f}, {12.5f, 20f}, {14f, 28f},
+                {12f, 36f}, {13f, 42f}, {12.5f, 50f}, {14f, 58f}
             };
 
             for (int i = 0; i < treePositions.GetLength(0); i++)
             {
                 float x = treePositions[i, 0];
                 float z = treePositions[i, 1];
-                bool isDark = Random.value > 0.5f;
-                CreateTree(parent, x, z, isDark ? foliageDark : foliageGreen, trunkColor);
+                float rand = Random.value;
+                Color foliageColor;
+                if (rand > 0.7f) foliageColor = foliageGolden;
+                else if (rand > 0.4f) foliageColor = foliageDark;
+                else foliageColor = foliageGreen;
+
+                float scale = Random.Range(0.8f, 1.3f);
+                CreateTree(parent, x, z, foliageColor, trunkColor, scale);
             }
         }
 
-        private static void CreateTree(Transform parent, float x, float z, Color foliageColor, Color trunkColor)
+        private static void CreateTree(Transform parent, float x, float z, Color foliageColor, Color trunkColor, float scale = 1f)
         {
-            float height = Random.Range(2.5f, 4.5f);
+            float height = Random.Range(2.5f, 4.5f) * scale;
             float trunkHeight = height * 0.5f;
-            float foliageRadius = Random.Range(1.2f, 2.0f);
+            float foliageRadius = Random.Range(1.2f, 2.0f) * scale;
 
             GameObject tree = new GameObject("Tree");
             tree.transform.SetParent(parent);
@@ -100,7 +129,7 @@ namespace Canicross.Environment
             trunk.name = "Trunk";
             trunk.transform.SetParent(tree.transform);
             trunk.transform.localPosition = new Vector3(0, trunkHeight * 0.5f, 0);
-            trunk.transform.localScale = new Vector3(0.2f, trunkHeight * 0.5f, 0.2f);
+            trunk.transform.localScale = new Vector3(0.2f * scale, trunkHeight * 0.5f, 0.2f * scale);
 
             Material trunkMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
             trunkMat.color = trunkColor;
@@ -123,16 +152,77 @@ namespace Canicross.Environment
 
         private static void CreatePath(Transform parent)
         {
+            // Main dirt trail
             GameObject path = GameObject.CreatePrimitive(PrimitiveType.Plane);
             path.name = "Trail_Dirt";
             path.transform.SetParent(parent);
             path.transform.position = new Vector3(0, 0.01f, 50);
-            path.transform.localScale = new Vector3(3, 1, 10);
+            path.transform.localScale = new Vector3(3.5f, 1, 12);
 
             Material pathMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            pathMat.color = new Color(0.36f, 0.25f, 0.15f);
+            pathMat.color = new Color(0.4f, 0.28f, 0.15f);
             pathMat.SetFloat("_Glossiness", 0.05f);
             path.GetComponent<Renderer>().material = pathMat;
+
+            // Trail edges - slightly lighter for worn look
+            GameObject pathEdgeL = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            pathEdgeL.name = "TrailEdgeL";
+            pathEdgeL.transform.SetParent(parent);
+            pathEdgeL.transform.position = new Vector3(-1.8f, 0.005f, 50);
+            pathEdgeL.transform.localScale = new Vector3(0.6f, 1, 12);
+
+            Material edgeMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            edgeMat.color = new Color(0.35f, 0.32f, 0.18f);
+            edgeMat.SetFloat("_Glossiness", 0.05f);
+            pathEdgeL.GetComponent<Renderer>().material = edgeMat;
+
+            GameObject pathEdgeR = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            pathEdgeR.name = "TrailEdgeR";
+            pathEdgeR.transform.SetParent(parent);
+            pathEdgeR.transform.position = new Vector3(1.8f, 0.005f, 50);
+            pathEdgeR.transform.localScale = new Vector3(0.6f, 1, 12);
+            pathEdgeR.GetComponent<Renderer>().material = edgeMat;
+        }
+
+        private static void CreateGoldenField(Transform parent)
+        {
+            // Create a golden field area around z=35-45 (clearing)
+            GameObject field = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            field.name = "GoldenField";
+            field.transform.SetParent(parent);
+            field.transform.position = new Vector3(-6, 0, 40);
+            field.transform.localScale = new Vector3(8, 1, 4);
+
+            Material fieldMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            fieldMat.color = new Color(0.75f, 0.65f, 0.2f);
+            fieldMat.SetFloat("_Glossiness", 0.1f);
+            field.GetComponent<Renderer>().material = fieldMat;
+
+            // Add a solitary tree in the clearing
+            Color trunkColor = new Color(0.35f, 0.22f, 0.1f);
+            Color foliageColor = new Color(0.5f, 0.55f, 0.2f);
+            CreateTree(parent, -6, 40, foliageColor, trunkColor, 1.4f);
+        }
+
+        private static void CreateForestTunnel(Transform parent)
+        {
+            // Dense trees forming a tunnel around z=55-70
+            Color trunkColor = new Color(0.35f, 0.22f, 0.1f);
+            Color foliageDark = new Color(0.05f, 0.18f, 0.05f);
+
+            float[,] tunnelPositions = new float[,]
+            {
+                {-3f, 55f}, {-3.5f, 58f}, {-3f, 62f}, {-3.5f, 66f}, {-3f, 70f},
+                {3f, 55f}, {3.5f, 58f}, {3f, 62f}, {3.5f, 66f}, {3f, 70f},
+                {-2.5f, 52f}, {2.5f, 52f}, {-2.5f, 73f}, {2.5f, 73f}
+            };
+
+            for (int i = 0; i < tunnelPositions.GetLength(0); i++)
+            {
+                float x = tunnelPositions[i, 0];
+                float z = tunnelPositions[i, 1];
+                CreateTree(parent, x, z, foliageDark, trunkColor, 1.1f);
+            }
         }
 
         private static void CreateProps(Transform parent)
@@ -142,6 +232,13 @@ namespace Canicross.Environment
             CreateRock(parent, new Vector3(2.2f, 0.15f, 25f), 0.4f);
             CreateRock(parent, new Vector3(-1.8f, 0.12f, 40f), 0.3f);
             CreateRock(parent, new Vector3(1.5f, 0.18f, 70f), 0.5f);
+            CreateRock(parent, new Vector3(-2.5f, 0.1f, 85f), 0.35f);
+
+            // Small bushes
+            CreateBush(parent, new Vector3(-2.5f, 0, 18f), 0.6f);
+            CreateBush(parent, new Vector3(2.8f, 0, 32f), 0.5f);
+            CreateBush(parent, new Vector3(-2.2f, 0, 48f), 0.7f);
+            CreateBush(parent, new Vector3(2.5f, 0, 65f), 0.55f);
         }
 
         private static void CreateBench(Transform parent, Vector3 pos)
@@ -150,15 +247,15 @@ namespace Canicross.Environment
             bench.transform.SetParent(parent);
             bench.transform.position = pos;
 
+            Material woodMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            woodMat.color = new Color(0.55f, 0.35f, 0.15f);
+            woodMat.SetFloat("_Glossiness", 0.05f);
+
             GameObject seat = GameObject.CreatePrimitive(PrimitiveType.Cube);
             seat.name = "Seat";
             seat.transform.SetParent(bench.transform);
             seat.transform.localPosition = new Vector3(0, 0.35f, 0);
             seat.transform.localScale = new Vector3(1.2f, 0.08f, 0.4f);
-
-            Material woodMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            woodMat.color = new Color(0.55f, 0.35f, 0.15f);
-            woodMat.SetFloat("_Glossiness", 0.05f);
             seat.GetComponent<Renderer>().material = woodMat;
             DestroyColliderIfPrimitive(seat);
 
@@ -188,6 +285,21 @@ namespace Canicross.Environment
             rock.GetComponent<Renderer>().material = rockMat;
         }
 
+        private static void CreateBush(Transform parent, Vector3 pos, float scale)
+        {
+            GameObject bush = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            bush.name = "Bush";
+            bush.transform.SetParent(parent);
+            bush.transform.position = pos + Vector3.up * scale * 0.4f;
+            bush.transform.localScale = new Vector3(scale, scale * 0.7f, scale);
+
+            Material bushMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            bushMat.color = new Color(0.2f, 0.5f, 0.15f);
+            bushMat.SetFloat("_Glossiness", 0.1f);
+            bush.GetComponent<Renderer>().material = bushMat;
+            DestroyColliderIfPrimitive(bush);
+        }
+
         private static void CreateLighting(Transform parent)
         {
             GameObject sun = new GameObject("Directional Light");
@@ -203,6 +315,35 @@ namespace Canicross.Environment
 
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.6f, 0.65f, 0.75f);
+        }
+
+        private static void CreateAtmosphere(Transform parent)
+        {
+            // Add some god ray-like vertical light pillars (simple visual effect)
+            for (int i = 0; i < 5; i++)
+            {
+                float z = 20f + i * 18f;
+                float x = Random.Range(-2f, 2f);
+
+                GameObject lightPillar = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                lightPillar.name = "GodRay_" + i;
+                lightPillar.transform.SetParent(parent);
+                lightPillar.transform.position = new Vector3(x, 4f, z);
+                lightPillar.transform.localScale = new Vector3(0.8f, 4f, 0.8f);
+                lightPillar.transform.rotation = Quaternion.Euler(0, 0, Random.Range(-10f, 10f));
+
+                Material rayMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                rayMat.color = new Color(0.9f, 0.85f, 0.5f, 0.15f);
+                rayMat.SetFloat("_Glossiness", 0f);
+                rayMat.SetFloat("_Metallic", 0f);
+                rayMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                rayMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                rayMat.SetInt("_ZWrite", 0);
+                rayMat.EnableKeyword("_ALPHAPREMULTIPLY_ON");
+                rayMat.renderQueue = 3000;
+                lightPillar.GetComponent<Renderer>().material = rayMat;
+                DestroyColliderIfPrimitive(lightPillar);
+            }
         }
 
         private static void CreateCheckpoints(Transform parent)
@@ -277,9 +418,11 @@ namespace Canicross.Environment
             CreateRootObstacle(parent, new Vector3(0.8f, 0.1f, 20f));
             CreateRootObstacle(parent, new Vector3(-0.5f, 0.1f, 35f));
             CreateRootObstacle(parent, new Vector3(0.3f, 0.1f, 60f));
+            CreateRootObstacle(parent, new Vector3(-0.7f, 0.1f, 80f));
 
             CreateMudPatch(parent, new Vector3(0, 0.01f, 15f), new Vector3(2, 0.05f, 3));
-            CreateMudPatch(parent, new Vector3(0, 0.01f, 65f), new Vector3(1.5f, 0.05f, 2));
+            CreateMudPatch(parent, new Vector3(0, 0.01f, 45f), new Vector3(1.5f, 0.05f, 2));
+            CreateMudPatch(parent, new Vector3(0, 0.01f, 65f), new Vector3(2, 0.05f, 2.5f));
         }
 
         private static void CreateRootObstacle(Transform parent, Vector3 pos)

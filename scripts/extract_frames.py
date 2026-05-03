@@ -8,7 +8,7 @@ import os
 import cv2
 from pathlib import Path
 
-BASE = Path("/home/asardinha/workspace/cani-game")
+BASE = Path("/mnt/c/Users/alexa/Projetos/cani-game")
 
 
 def extract_frames(video_dir, frames_dir, every_n_seconds=2):

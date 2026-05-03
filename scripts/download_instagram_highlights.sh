@@ -1,11 +1,20 @@
 #!/bin/bash
 # Script para baixar os highlights do Instagram
-# Requer: yt-dlp instalado + estar logado no Instagram no Chrome/Firefox
+# Requer: yt-dlp instalado + estar logado no Instagram no Chromium (WSL snap)
+#
+# Passo a passo:
+#   1. chromium-browser https://www.instagram.com/accounts/login/
+#   2. Faça login no Instagram
+#   3. Feche o Chromium
+#   4. Execute este script
 
 set -e
 
-DEST_DIR="/home/asardinha/workspace/cani-game/Characters/_raw_downloads"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BASE_DIR="$(dirname "$SCRIPT_DIR")"
+DEST_DIR="$BASE_DIR/Characters/_raw_downloads"
 HIGHLIGHT_URL="https://www.instagram.com/stories/highlights/18259015006201085/"
+COOKIES_PATH="chromium:/home/asardinha/snap/chromium/common/chromium/Default"
 
 mkdir -p "$DEST_DIR"
 cd "$DEST_DIR"
@@ -15,19 +24,15 @@ echo "Conta: @adao.superacao"
 echo "Destino: $DEST_DIR"
 echo ""
 
-# Tenta usar cookies do navegador (Windows - WSL)
-echo "[1/3] Tentando Chrome..."
-yt-dlp --cookies-from-browser chrome "$HIGHLIGHT_URL" -o "%(title)s_%(id)s.%(ext)s" 2>&1 || true
-
-echo "[2/3] Tentando Firefox..."
-yt-dlp --cookies-from-browser firefox "$HIGHLIGHT_URL" -o "%(title)s_%(id)s.%(ext)s" 2>&1 || true
+echo "[1/1] Usando cookies do Chromium (snap WSL)..."
+yt-dlp --cookies-from-browser "$COOKIES_PATH" "$HIGHLIGHT_URL" -o "%(title)s_%(id)s.%(ext)s"
 
 echo ""
-echo "=== Download concluído ==="
+echo "=== Download concluido ==="
 echo "Arquivos baixados:"
 ls -la "$DEST_DIR/"
 
 echo ""
-echo "Agora execute:"
-echo "  python3 /home/asardinha/workspace/cani-game/scripts/organize_references.py"
-echo "para organizar as fotos/vídeos nas pastas corretas"
+echo "Agora copie manualmente para as pastas de referencia ou execute:"
+echo "  python3 $SCRIPT_DIR/organize_references.py"
+echo "para ver a lista de arquivos baixados."

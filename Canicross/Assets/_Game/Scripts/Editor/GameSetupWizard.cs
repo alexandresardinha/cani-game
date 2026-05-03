@@ -15,6 +15,10 @@ namespace Canicross.Editor
         {
             Debug.Log("[Canicross] Setting up game scene...");
 
+            var scene = UnityEditor.SceneManagement.EditorSceneManager.NewScene(
+                UnityEditor.SceneManagement.NewSceneSetup.EmptyScene,
+                UnityEditor.SceneManagement.NewSceneMode.Single);
+
             GameObject dog = CreateDog();
             GameObject runner = CreateRunner();
             GameObject tether = CreateTether(dog, runner);
@@ -26,13 +30,18 @@ namespace Canicross.Editor
 
             Environment.TrackGenerator.GenerateLakeParkTrack(null);
 
+            string scenePath = "Assets/_Game/Scenes/Track_01_Lago.unity";
+            UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene, scenePath);
+            Debug.Log("[Canicross] Game scene saved to: " + scenePath);
+
             Debug.Log("[Canicross] Game scene setup complete! Press Play to test.");
         }
 
         private static GameObject CreateDog()
         {
             GameObject dog = Player.CharacterBuilder.BuildDog();
-            dog.transform.position = new Vector3(0, 0.3f, 8f);
+            // Raised Y from 0.3f to 0.6f so the dog is not embedded in the ground
+            dog.transform.position = new Vector3(0, 0.6f, 8f);
             dog.transform.rotation = Quaternion.identity;
             return dog;
         }

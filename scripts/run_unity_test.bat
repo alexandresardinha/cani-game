@@ -28,6 +28,7 @@ echo [2/3] Rodando Unity em batch mode (nographics)...
   -projectPath "%PROJECT_PATH%" ^
   -executeMethod Canicross.Editor.AutoTester.RunTest ^
   -logFile "%RESULTS_PATH%\unity_log.txt" ^
+  -forgetProjectPath ^
   -quit
 
 echo [3/3] Verificando resultados...
