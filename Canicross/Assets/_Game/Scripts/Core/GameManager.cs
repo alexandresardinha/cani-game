@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Canicross.Player;
 using Canicross.Systems;
 using Canicross.Environment;
@@ -77,13 +78,48 @@ namespace Canicross.Core
             CurrentState = newState;
         }
 
+        public void LoadMenu()
+        {
+            SceneManager.LoadScene("MainMenu");
+        }
+
+        public void LoadTrack(string trackName)
+        {
+            SceneManager.LoadScene(trackName);
+        }
+
         private void Start()
         {
-            // Auto-start countdown if we're in a gameplay scene (no menu flow needed)
-            if (CurrentState == GameState.Menu && raceManager != null)
+            SceneManager.activeSceneChanged += OnSceneLoaded;
+        }
+
+        private void OnDestroy()
+        {
+            SceneManager.activeSceneChanged -= OnSceneLoaded;
+        }
+
+        private void OnSceneLoaded(Scene oldScene, Scene newScene)
+        {
+            if (newScene.name == "Track_01_Lago")
             {
-                StartCountdown();
+                CurrentState = GameState.Menu;
+                FindSceneReferences();
+                if (raceManager != null)
+                {
+                    StartCountdown();
+                }
             }
+        }
+
+        private void FindSceneReferences()
+        {
+            if (dogController == null) dogController = FindFirstObjectByType<DogController>();
+            if (runnerController == null) runnerController = FindFirstObjectByType<RunnerController>();
+            if (staminaSystem == null) staminaSystem = FindFirstObjectByType<StaminaSystem>();
+            if (bondSystem == null) bondSystem = FindFirstObjectByType<BondSystem>();
+            if (raceManager == null) raceManager = FindFirstObjectByType<RaceManager>();
+            if (trackManager == null) trackManager = FindFirstObjectByType<TrackManager>();
+            if (hudController == null) hudController = FindFirstObjectByType<HUDController>();
         }
     }
 }

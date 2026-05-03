@@ -29,10 +29,13 @@ Assets/AssetStoreTools*
 Thumbs.db
 *~
 
-# Large media (modeling reference)
+# Large media — not tracked in git
 Characters/_raw_downloads/
-Characters/*/Reference/Videos/*.mp4
-Characters/*/Reference/Videos/*.webm
+Characters/*/Reference/Frames/
+Refs/*.mp4
+Refs/*.webm
+Refs/frame_*.png
+Refs/reel_f*.png
 
 # Downloaded reference videos
 *.mp4
@@ -45,5 +48,14 @@ reel_f*.png
 temp_*/
 /tmp/
 
-# Keep directory structure
+# Test results (generated locally)
+TestResults/
+Canicross/TestResults/
+
+# Unity generated
+Canicross/Canicross.slnx
+Canicross/Assembly-CSharp.csproj
+Canicross/Assembly-CSharp-Editor.csproj
+
+# keep directory structure
 !Characters/**/.gitkeep

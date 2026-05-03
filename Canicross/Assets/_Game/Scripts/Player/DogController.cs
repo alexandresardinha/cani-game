@@ -21,9 +21,13 @@ namespace Canicross.Player
         [SerializeField] private float steerSmoothness = 5f;
         [SerializeField] private float maxLateralOffset = 1.5f;
 
+        [Header("Tether Pull")]
+        [SerializeField] private float tetherPullStrength = 5f;
+
         [Header("References")]
         [SerializeField] private StaminaSystem staminaSystem;
         [SerializeField] private Rigidbody rb;
+        private TetherSystem tetherSystem;
 
         public bool IsGrounded { get; private set; } = true;
         public bool IsBoosting { get; private set; }
@@ -44,6 +48,7 @@ namespace Canicross.Player
         {
             if (rb == null) rb = GetComponent<Rigidbody>();
             if (staminaSystem == null) staminaSystem = FindFirstObjectByType<StaminaSystem>();
+            if (tetherSystem == null) tetherSystem = FindFirstObjectByType<TetherSystem>();
             startingForward = transform.forward;
             CurrentSpeed = baseSpeed;
         }
@@ -80,6 +85,19 @@ namespace Canicross.Player
         {
             UpdateSteering();
             ApplyMovement();
+            ApplyTetherForce();
+        }
+
+        private void ApplyTetherForce()
+        {
+            if (rb == null || tetherSystem == null) return;
+
+            if (tetherSystem.IsTaut && tetherSystem.CurrentTension > 0)
+            {
+                Vector3 pullDir = tetherSystem.GetPullDirection();
+                float pullForce = tetherSystem.GetSpringForce() * tetherPullStrength;
+                rb.AddForce(pullDir * pullForce * Time.fixedDeltaTime, ForceMode.VelocityChange);
+            }
         }
 
         private void UpdateTargetSpeed()

@@ -1,5 +1,6 @@
 using UnityEngine;
 using Canicross.Systems;
+using Canicross.Player;
 
 namespace Canicross.Player
 {
@@ -7,72 +8,106 @@ namespace Canicross.Player
     {
         [Header("Tether")]
         [SerializeField] private Transform dogTransform;
-        [SerializeField] private float tetherLength = 2.5f;
-        [SerializeField] private float tetherSpring = 50f;
-        [SerializeField] private float tetherDamper = 10f;
+        [SerializeField] private float tetherRestLength = 1.5f;
+        [SerializeField] private float tetherMaxDistance = 3f;
+        [SerializeField] private float tetherSpring = 60f;
+        [SerializeField] private float tetherDamper = 8f;
 
         [Header("Movement")]
-        [SerializeField] private float moveSpeed = 12f;
-        [SerializeField] private float lateralSpeed = 5f;
+        [SerializeField] private float baseFollowSpeed = 10f;
+        [SerializeField] private float lateralFollowDamping = 3f;
+        [SerializeField] private float gravityForce = -20f;
 
         [Header("References")]
         [SerializeField] private StaminaSystem staminaSystem;
         [SerializeField] private CharacterController charController;
+        [SerializeField] private TetherSystem tetherSystem;
 
         public bool IsMoving { get; private set; }
+        public float CurrentSpeedKmh { get; private set; }
+
+        private Vector3 previousPosition;
 
         private void Start()
         {
             if (charController == null) charController = GetComponent<CharacterController>();
             if (staminaSystem == null) staminaSystem = FindFirstObjectByType<StaminaSystem>();
+            if (tetherSystem == null) tetherSystem = FindFirstObjectByType<TetherSystem>();
+            previousPosition = transform.position;
         }
 
         private void Update()
         {
             if (dogTransform == null) return;
 
-            Vector3 tetherVector = transform.position - dogTransform.position;
-            float distance = tetherVector.magnitude;
+            Vector3 moveDirection = CalculateMovement();
 
-            Vector3 moveDirection = Vector3.zero;
-
-            if (distance > tetherLength)
-            {
-                Vector3 pullDirection = (dogTransform.position - transform.position).normalized;
-                float pullForce = Mathf.Clamp((distance - tetherLength) * tetherSpring, 0f, 20f) * Time.deltaTime;
-                pullForce -= tetherDamper * Time.deltaTime;
-
-                moveDirection = pullDirection * (moveSpeed + pullForce);
-            }
-            else
-            {
-                Vector3 forward = dogTransform.forward;
-                moveDirection = forward * moveSpeed * 0.8f;
-            }
-
-            IsMoving = moveDirection.magnitude > 0.1f;
-
-            if (staminaSystem != null)
-            {
-                if (IsMoving)
-                {
-                    staminaSystem.ConsumeRunnerStamina(Time.deltaTime);
-                }
-                else
-                {
-                    staminaSystem.RegenerateRunnerStamina(Time.deltaTime);
-                }
-            }
+            IsMoving = moveDirection.magnitude > 0.5f;
+            UpdateSpeedDisplay();
+            UpdateStamina();
 
             if (charController != null)
             {
-                moveDirection.y = Physics.gravity.y * Time.deltaTime;
+                moveDirection.y += gravityForce * Time.deltaTime;
                 charController.Move(moveDirection * Time.deltaTime);
             }
             else
             {
                 moveDirection.y = 0f;
                 transform.position += moveDirection * Time.deltaTime;
+            }
+        }
+
+        private Vector3 CalculateMovement()
+        {
+            Vector3 toDog = dogTransform.position - transform.position;
+            float distance = toDog.magnitude;
+            Vector3 dirToDog = toDog.normalized;
+
+            Vector3 moveDirection = Vector3.zero;
+
+            float forwardComponent = Vector3.Dot(toDog, transform.forward);
+
+            if (distance > tetherRestLength)
+            {
+                float pullForce = Mathf.Clamp((distance - tetherRestLength) * tetherSpring * 0.02f, 0f, 25f);
+
+                moveDirection += dirToDog * (baseFollowSpeed + pullForce);
+
+                if (distance > tetherMaxDistance)
+                {
+                    moveDirection += dirToDog * ((distance - tetherMaxDistance) * tetherSpring * 0.1f);
+                }
+
+                float lateralOffset = Vector3.Dot(toDog, transform.right);
+                moveDirection += transform.right * (lateralOffset * lateralFollowDamping);
+            }
+            else
+            {
+                moveDirection = dirToDog * baseFollowSpeed * 0.7f;
+            }
+
+            return moveDirection;
+        }
+
+        private void UpdateSpeedDisplay()
+        {
+            float distanceMoved = Vector3.Distance(transform.position, previousPosition);
+            CurrentSpeedKmh = (distanceMoved / Time.deltaTime) * 3.6f;
+            previousPosition = transform.position;
+        }
+
+        private void UpdateStamina()
+        {
+            if (staminaSystem == null) return;
+
+            if (IsMoving)
+            {
+                staminaSystem.ConsumeRunnerStamina(Time.deltaTime);
+            }
+            else
+            {
+                staminaSystem.RegenerateRunnerStamina(Time.deltaTime);
             }
         }
 
